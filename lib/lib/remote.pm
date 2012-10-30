@@ -8,60 +8,61 @@ use LWP::UserAgent;
 
 =encoding utf8
 
-=head1 ПРИВЕТСТВИЕ
-
-Други, братаны, потьсёны и многоуважаемый женский пол!
+=head1 ПРИВЕТСТВИЕ SALUTE
 
 Доброго всем! Доброго здоровья! Доброго духа!
 
+Hello all! Nice health! Good thinks!
 
 =cut
 
 =head1 NAME
 
-lib::remote - Удаленное использование модулей. Загружает исходник модуля с удаленного сервера. Одна манипуляция с @INC - push @INC, sub {}, которая возвращает filehandle для контента, полученного удаленно.
+lib::remote - Удаленное использование модулей. Загружает исходник модуля с удаленного сервера. Одна манипуляция с @INC - C<push @INC, sub {};>. Диспетчер возвращает filehandle для контента, полученного удаленно. Смотреть perldoc -f require.
 
-Подсмотрено из http://forum.codecall.net/topic/64285-perl-use-modules-on-remote-servers/
+lib::remote - Perl pragma for use remote modules without installation basically throught protocols like http. One C<push @INC, sub {};> This dispather will return filehandle for downloaded content of a module from remote server. See perldoc -f require.
+
+Идея из http://forum.codecall.net/topic/64285-perl-use-modules-on-remote-servers/
 
 Кто-то еще стырил http://www.linuxdigest.org/2012/06/use-modules-on-remote-servers/ (поздняя дата и есть ошибки)
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 =head1 FAQ
 
-Q: Зачем?
+Q: Зачем? Why?
 
-A: За лосем.
+A: За лосем. For elk.
 
-Q: Почему?
+Q: Почему? Why?
 
-A: По кочану.
+A: По кочану. For head of cabbage.
 
 
 =head1 SYNOPSIS
 
-Все просто, потьсёны, по аналогии с:
+Все просто, по аналогии с локальным вариантом:
 
     use lib '../to/any/local/lib';
 
-делаем:
+указываем урл:
 
-    use lib::remote 'http://<хост>/site-perl/.../';
+    use lib::remote 'http://<хост(host)>/site-perl/.../';
     use My::Module1;
     ...
 
-Искомый модуль будет запрашиваться как в локальном варианте, дописывая в конце URL: http://<хост>/site-perl/.../My/Module1.pm
+Искомый модуль будет запрашиваться как в локальном варианте, дописывая в конце URL: http://<хост(host)>/site-perl/.../My/Module1.pm
 
 Допустим, УРЛ сложнее, не содержит имени модуля или используются параметры: https://<хост>/.../?key=ede35ac1208bbf479&...
 
-Тогда делаем пары ключ->значение:
+Тогда делаем пары ключ->значение, указывая КОНКРЕТНЫЙ урл для КОНКРЕТНОГО модуля, например:
 
     use lib::remote
         'http://....',
@@ -75,13 +76,11 @@ A: По кочану.
 
 Не трудно догадаться, что вычленение пар в общем списке происходит по специфике URI.
 
-=head3 Внимание
+B<Внимание>
 
-Конкретно указанный модуль через пару будет искаться сначала в своем урл, а потом в безымянных безключевых параметрах.
+Конкретно указанный модуль (через пару) будет искаться сначала в своем урл, а потом в безымянных безключевых параметрах.
 
-При многократном вызове use lib::remote все параметры и урлы сохраняются, аналогично use lib '';, но естественно не в @INC.
-
-Повторюсь, в @INC помещается только один диспетчер.
+При многократном вызове use lib::remote все параметры и урлы сохраняются, аналогично use lib '';, но естественно не в @INC. Повторюсь, в @INC помещается только один диспетчер.
 
 =head2 Расширенный синтаксис
 
@@ -94,7 +93,19 @@ A: По кочану.
 
 Видно, что URL передается первым элементом массива, остальные элементы как пары дополнительных опций.
 
-=head2 Конфигурация модуля
+Опции:
+
+=over 4
+
+=item * charset => 'utf-8', Задать кодировку урла. Если веб-сервер правильно выдает C<Content-Type: application/x-perl; charset=...>, тогда не нужно, ->decoded_content сработает. Помнить про C<use utf8;>
+
+=item * что еще?
+
+=back
+
+=head2 Конфигурация модуля lib::remote
+
+Просто передаем дополнительную пару ключ->значение:
 
     use lib::remote
         'lib::remote'=>[opt1 =>..., opt2 =>..., ....],
@@ -102,7 +113,9 @@ A: По кочану.
     ;
     ...
 
-Видно, что ключ должен совпадать с именем этого модуля 'lib::remote'. Основные опции:
+Видно, что ключ должен совпадать с именем этого модуля 'lib::remote'. Это и есть признак конфигурационных данных.
+
+Основные опции:
 
 =over 4
 
@@ -112,9 +125,9 @@ A: По кочану.
 
 =back
 
+=head1 Требования REQUIRES
 
-
-Если 'http://...', 'https://...', 'ftp://...', 'file://...' то нужен LWP::UserAgent
+Если урлы 'http://...', 'https://...', 'ftp://...', 'file://...', то нужен LWP::UserAgent
 
 Если 'ssh://...' - TODO
 
@@ -128,7 +141,28 @@ Url может возвращать сразу пачку модулей (packag
 
 Только внутренние.
 
+=head1 Пример конфига для NGINX, раздающего модули:
+
+    ...
+    server {
+        listen       81;
+#        server_name  localhost;
+
+
+        location / {
+            charset utf-8;
+            charset_types *;
+            root   /home/perl/lib-remote/;
+            index  index.html index.htm;
+        }
+
+    }
+    ...
+
+
 =cut
+
+
 
 my %config = (
     autouse =>1,
@@ -143,8 +177,8 @@ BEGIN {
         my $self = shift;# эта функция CODE(0xf4d728) вроде не нужна
         my $arg = shift;#Имя/Модуля.pm
         my $mod = $arg;
-        $mod =~ s|/|::|g;
-        $mod =~ s|\.pm$||g;
+        $mod =~ s#/#::#g;
+        $mod =~ s#\.pm$##g;
         #~ print "remote INC sub: module=[$mod]\n",;# lwpget: arg=[Имя/Модуля.pm] Имя::Модуля
         #~ return undef unless $url;
         my $content;
@@ -189,6 +223,7 @@ sub import {
                 if ( $module eq __PACKAGE__ ) {
                     my %opt = @$_;
                     map {$config{$_} = $opt{$_};} keys %opt;
+                    #~ print "config:", %config, "\n";
                 } else {
                     $new_mods{$module} = $_;
                 }
@@ -213,6 +248,7 @@ sub import {
         #~ $file =~ s#::#/#g;
         if ( $config{autouse} ) {
             eval "use $_;";# вот сразу заход в диспетчер
+            print "eval use $_;\n";
             if ($@) {
                 warn "Возможно проблемы с модулем [$_]: $@";
             }
@@ -227,7 +263,7 @@ sub lwpget {
     my $get = $ua->get($url);
     if ( $get->is_success ) {
         #~ print "lwpget success [$url]\n";
-        return $get->decoded_content;# ??? ->content нужно отладить
+        return $get->decoded_content();# ??? ->content нужно отладить charset=>'cp-1251'
     } else {
         #~ die "LWP::UserAgent->get($url) failed: ". $module->status_line."\n";
         return undef;
@@ -286,6 +322,8 @@ L<http://search.cpan.org/dist/lib-remote/>
 Глянь L<PAR>
 
 Глянь L<Remote::Use>
+
+Глянь L<lib::http>
 
 =head1 LICENSE AND COPYRIGHT
 
