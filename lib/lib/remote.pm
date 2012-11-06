@@ -18,21 +18,21 @@ Hello all! Nice health! Good thinks!
 
 =head1 NAME
 
-lib::remote - Удаленное использование модулей. Загружает исходник модуля с удаленного сервера. Одна манипуляция с @INC - C<push @INC, sub {};>. Диспетчер возвращает filehandle для контента, полученного удаленно. Смотреть perldoc -f require.
+lib::remote - Удаленное использование модулей. Загружает модули с удаленного сервера. Только один диспетчер в @INC- C<push @INC, sub {...};>. Диспетчер возвращает filehandle для контента, полученного удаленно. Смотреть perldoc -f require.
 
-lib::remote - Perl pragma for use remote modules without installation basically throught protocols like http. One C<push @INC, sub {};> This dispather will return filehandle for downloaded content of a module from remote server. See perldoc -f require.
+lib::remote - pragma for use remote modules without installation basically throught protocols like http. One dispather on @INC - C<push @INC, sub {};> This dispather will return filehandle for downloaded content of a module from remote server. See perldoc -f require.
 
-Идея из http://forum.codecall.net/topic/64285-perl-use-modules-on-remote-servers/
+Идея из L</http://forum.codecall.net/topic/64285-perl-use-modules-on-remote-servers/>
 
-Кто-то еще стырил http://www.linuxdigest.org/2012/06/use-modules-on-remote-servers/ (поздняя дата и есть ошибки)
+Кто-то еще стырил L</http://www.linuxdigest.org/2012/06/use-modules-on-remote-servers/> (поздняя дата и есть ошибки)
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 
 =head1 FAQ
@@ -48,9 +48,9 @@ A: По кочану. For head of cabbage.
 
 =head1 SYNOPSIS
 
-Все просто, по аналогии с локальным вариантом:
+Все просто. По аналогии с локальным вариантом:
 
-    use lib '../to/any/local/lib';
+    use lib '/to/any/local/lib';
 
 указываем урл:
 
@@ -195,7 +195,6 @@ BEGIN {
         }
         unless ($content) {# перебор удаленных папок
             for (@base_ulrs) {
-                s#/$##;
                 my $url = "$_/$arg";
                 if ( $url =~ m#^(http|https|ftp|file)://# ) {#LWP
                     $content = lwpget($url);
@@ -218,6 +217,7 @@ sub import {
     my %new_mods = ();# для этого захода
     my %unique = @base_ulrs;
     map {# разбор аргументов
+        my $arg = $_;
         if ( ref($_) || m#^\w+://# ) {
             if ($module) {
                 if ( $module eq __PACKAGE__ ) {
@@ -230,7 +230,8 @@ sub import {
                 $module = undef;
             } else {
                 #~ print "push base_url\n";
-                push @base_ulrs, $_ unless $unique{$_}++;
+               $arg =~ s#/$##;
+                push @base_ulrs, $arg unless $unique{$arg}++;
             }
         } else {
             die "Неверный синтаксис. Для [$module] не указан URL" if $module;

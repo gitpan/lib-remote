@@ -2,9 +2,18 @@ lib-remote
 ==========
 
 
-Доброго всем!
+Доброго всем! Hello all!
 
-lib::remote - Удаленное использование модулей. Загружает исходник модуля с удаленного сервера. Одна манипуляция с @INC - push @INC, sub {}, которая возвращает filehandle для контента, полученного удаленно.
+lib::remote - pragma for use remote modules without installation basically by protocols like http. One dispather on @INC - push @INC, sub {...}; This dispather will return filehandle for downloaded content of a module from remote server. See perldoc -f require.
+
+Like:
+
+    use lib '/to/any/local/lib';
+
+    use lib::remote 'http://<host>/site-perl/.../';
+    use My::Module1;
+
+lib::remote - Удаленное использование модулей. Загружает модули с удаленного сервера. Только один диспетчер в @INC - push @INC, sub {...}. Диспетчер возвращает filehandle для контента, полученного удаленно.
 
 DEPENDENCIES
 

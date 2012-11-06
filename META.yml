@@ -16,10 +16,10 @@ name: lib-remote
 provides:
   lib::remote:
     file: lib/lib/remote.pm
-    version: 0.03
+    version: 0.04
 requires:
   LWP::UserAgent: 0
   perl: 5.006
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.03
+version: 0.04
