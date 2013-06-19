@@ -4,7 +4,7 @@
       "Mikhail Che <m.che#aukama.dyndns.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.112621",
+   "generated_by" : "Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630",
    "license" : [
       "perl_5"
    ],
@@ -16,17 +16,17 @@
    "prereqs" : {
       "build" : {
          "requires" : {
-            "Test::More" : 0
+            "Test::More" : "0"
          }
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.38"
+            "Module::Build" : "0.39"
          }
       },
       "runtime" : {
          "requires" : {
-            "LWP::UserAgent" : 0,
+            "LWP::UserAgent" : "0",
             "perl" : "5.006"
          }
       }
@@ -34,7 +34,7 @@
    "provides" : {
       "lib::remote" : {
          "file" : "lib/lib/remote.pm",
-         "version" : "0.04"
+         "version" : "0.05"
       }
    },
    "release_status" : "stable",
@@ -43,5 +43,5 @@
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.04"
+   "version" : "0.05"
 }

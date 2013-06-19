@@ -5,9 +5,9 @@ author:
 build_requires:
   Test::More: 0
 configure_requires:
-  Module::Build: 0.38
+  Module::Build: 0.39
 dynamic_config: 1
-generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.112621'
+generated_by: 'Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -16,10 +16,10 @@ name: lib-remote
 provides:
   lib::remote:
     file: lib/lib/remote.pm
-    version: 0.04
+    version: 0.05
 requires:
   LWP::UserAgent: 0
   perl: 5.006
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.04
+version: 0.05

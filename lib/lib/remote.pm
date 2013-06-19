@@ -28,11 +28,11 @@ lib::remote - pragma for use remote modules without installation basically throu
 
 =head1 VERSION
 
-Version 0.04
+Version 0.05
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 
 =head1 FAQ
@@ -85,13 +85,17 @@ B<Внимание>
 =head2 Расширенный синтаксис
 
     use lib::remote
+        'http://....',
         ['http://....', opt1 =>..., opt2 =>..., ....],
-        'Some::Module1'=>['https://<хост>/...',....],
-        'SomeModule2'=>['ssh://user@host:/..../SomeModule2.pm', 'pass'=>..., ...],
+        {url=>'http://....', opt1 =>..., opt2 =>..., ....},
+        'Some::Module1'=> 'http://....',
+        'Some::Module2'=>['http://...', opt1 =>..., opt2 =>..., ....],
+        'Some::Module3'=>{url => 'http://...', opt1 =>..., opt2 =>..., ....},
+        'SomeModule1'=>['ssh://user@host:/..../SomeModule2.pm', 'pass'=>..., ...],
+        'SomeModule2'=>{url => 'ssh://user@host:/..../SomeModule2.pm', 'pass'=>..., ...},
     ;
     ...
 
-Видно, что URL передается первым элементом массива, остальные элементы как пары дополнительных опций.
 
 Опции:
 
@@ -109,6 +113,7 @@ B<Внимание>
 
     use lib::remote
         'lib::remote'=>[opt1 =>..., opt2 =>..., ....],
+        or 'lib::remote'=>{opt1 =>..., opt2 =>..., ....},
         ...
     ;
     ...
@@ -168,9 +173,10 @@ my %config = (
     autouse =>1,
 );
 my $ua = LWP::UserAgent->new;
+my $url_re = qr#^(https?|ftp|file)://#i;
 #~ $ua->timeout(10);
-my %modules = ();#сохранение списка пар "Имя::модуля"=>[url]
-my @base_ulrs = ();# сохранение общих путей
+my %modules = ();#сохранение списка пар "Имя::модуля"=>{url => ..., ..., ...}
+my @base_ulrs = ();# сохранение общих путей {url=>..., ..., ...}
 
 BEGIN {
     push @INC, sub {# диспетчер
@@ -183,23 +189,12 @@ BEGIN {
         #~ return undef unless $url;
         my $content;
         if (my $m = $modules{$mod}) {# конкретный модуль
-            my $url = ref($m) ? $m->[0] : $m;
-            if ( $url =~ m#^(http|https|ftp|file)://# ) {#LWP
-                $content = lwpget($url);
-                #~ eval $content;
-                #~ if ($@) {
-                    #~ $url =~ s#/$##;
-                    #~ $content = lwpget("$url/$arg");
-                #~ }
-            }
+            $content = lwpget($m->{url});
         }
         unless ($content) {# перебор удаленных папок
             for (@base_ulrs) {
-                my $url = "$_/$arg";
-                if ( $url =~ m#^(http|https|ftp|file)://# ) {#LWP
-                    $content = lwpget($url);
-                    last if $content;
-                }
+                $content = lwpget("$_->{url}/$arg");
+                last if $content;
             }
         }
         return undef unless $content;
@@ -209,53 +204,45 @@ BEGIN {
     };
 }
 
-sub import {
+sub import { # это разбор аргументов после строк use lib::remote ...
     my $pkg = shift;# is eq __PACKAGE__
-    #~ my %arg = @_;
-    #~ print "import: ", "arg1=[$pkg], args: ", (map {"[$_], ";} @_), "\n";
     my $module;
-    my %new_mods = ();# для этого захода
-    my %unique = @base_ulrs;
-    map {# разбор аргументов
-        my $arg = $_;
-        if ( ref($_) || m#^\w+://# ) {
-            if ($module) {
-                if ( $module eq __PACKAGE__ ) {
-                    my %opt = @$_;
-                    map {$config{$_} = $opt{$_};} keys %opt;
-                    #~ print "config:", %config, "\n";
-                } else {
-                    $new_mods{$module} = $_;
-                }
-                $module = undef;
+    for my $arg (@_) {
+        my $opt = _opt($arg);
+        if ($module) {
+            if ( $module eq __PACKAGE__ ) {
+                $arg = {@$arg} if ref($arg) eq 'ARRAY';
+                @config{keys %$arg} = values %$arg;
+                #~ print "config:", %config, "\n";
             } else {
-                #~ print "push base_url\n";
-               $arg =~ s#/$##;
-                push @base_ulrs, $arg unless $unique{$arg}++;
+                if ($opt->{url} =~ /$url_re/) {
+                    $modules{$module} = $opt;
+                    if ($modules{$module}{autouse} || $config{autouse} ) {
+                        #~ eval "use $module;";# вот сразу заход в диспетчер @INC
+                        eval {require $module};
+                        warn "Возможно проблемы с модулем [$module]: $@" if $@;
+                    }
+                } else {
+                    warn "Bad or no url[$opt->{url}] for [$module]";
+                }
             }
+            $module = undef;
+            next;
+        } elsif ($opt->{url} =~ /$url_re/) {
+            push @base_ulrs, $opt unless $opt->{url} ~~ [map {$_->{url}} @base_ulrs];#$unique{$arg}++;
         } else {
-            die "Неверный синтаксис. Для [$module] не указан URL" if $module;
-            $module = $_;
+            $module = $arg;
         }
-    } @_;
-    
-    map {
-        $modules{$_} = $new_mods{$_};
-        #~ my @opt = ref($modules{$_}) ? @{$modules{$_}} : ($modules{$_});
-        #~ my $url = shift(@opt);
-        #~ $url =~ s#/$##;
-        #~ my %opt = @opt;
-        #~ my $file =$url;
-        #~ $file =~ s#::#/#g;
-        if ( $config{autouse} ) {
-            eval "use $_;";# вот сразу заход в диспетчер
-            print "eval use $_;\n";
-            if ($@) {
-                warn "Возможно проблемы с модулем [$_]: $@";
-            }
-        }
-    } keys %new_mods;
-    #~ print "import: ", (map {"[$_]";} @base_ulrs), "\n";
+    }
+}
+
+sub _opt {
+    my $arg  = shift;
+    my $ret = {url=>$arg,} unless ref($arg);
+    $ret ||= {url=>@$arg,} if ref($arg) eq 'ARRAY';
+    $ret ||= $arg if ref($arg) eq 'HASH';
+    $ret->{url} =~ s#/$## if $ret->{url};
+    return $ret;
 }
 
 sub lwpget {
